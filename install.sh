@@ -160,12 +160,20 @@ main() {
   mv -f ~/.zshrc-omztemp ~/.zshrc
 
   printf "${GREEN}"
-  echo ' ___________ __                            __         __     '
-  echo '/____  ____// /                           / /        / /     '
-  echo '    / /    / /____  _____ ( ) __  ___    / /__  ____/ /_____ '
-  echo '   / /    /  __  / / ___// / /  |/   |  / __  \/ __  // __  |'
-  echo '  / /    / /  / / / /   / / / /|  /| | / /_/ // /_/ // /_/  |'
-  echo ' /_/    /_/  /_/ /_/   /_/ /_/ |_/ |_| \____/ \____/ \____|_| ...empower your shell, enjoy yourself.'
+                                                   
+
+
+ 
+
+
+                                                 
+
+  echo '                                                 '
+  echo '               #      mmm     mmmm     mm  mmmmmm'
+  echo '  mmm    mmm   #   m    #    "   "#   m"#      #"'
+  echo ' "   #  "   #  # m"     #        m"  #" #     m" '
+  echo ' m"""#  m"""#  #"#      #      m"   #mmm#m   m"  '
+  echo ' "mm"#  "mm"#  #  "m  mm#mm  m#mmmm     #   m"    ...empower your shell, enjoy yourself.'
   printf "${NORMAL}"
   env zsh -l
 }
