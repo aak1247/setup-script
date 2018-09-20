@@ -161,13 +161,6 @@ main() {
 
   printf "${GREEN}"
                                                    
-
-
- 
-
-
-                                                 
-
   echo '                                                 '
   echo '               #      mmm     mmmm     mm  mmmmmm'
   echo '  mmm    mmm   #   m    #    "   "#   m"#      #"'
