@@ -1,4 +1,4 @@
-# shell-set-up
+# setup-scripts
 
 
 ## About 
