@@ -1,7 +1,8 @@
 export TERM="xterm-256color"
 export ZSH=$HOME/.oh-my-zsh
 
-ZSH_THEME="powerlevel9k/powerlevel9k"
+# ZSH_THEME="powerlevel9k/powerlevel9k"
+ZSH_THEME="af-magic"
 
 POWERLEVEL9K_MODE="nerdfont-complete"
 
@@ -62,7 +63,6 @@ POWERLEVEL9K_RIGHT_PROMPT_ELEMENTS=(status background_jobs time battery)
 
 # plugins
 plugins=(
-  autojump
   git
   zsh-autosuggestions
   zsh-syntax-highlighting
