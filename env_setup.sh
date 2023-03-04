@@ -1,5 +1,12 @@
 # check if device is in GFW or not
 function isInGFW() {
+    if command -v wget &> /dev/null; then
+      if wget -q --spider https://www.google.com/; then
+          echo "Google is accessible"
+      else
+          echo "Google is not accessible"
+      fi
+    fi
     if ping -q -c 1 -W 1 google.com >/dev/null; then
         return 1
     else
@@ -29,18 +36,21 @@ function getSysDist() {
 }
 
 function setupApt() {
-  if isInGFW; then
-    # if contains ubuntu, set apt mirror to aliyun
-    if [[ $(getSysDist) == *"Ubuntu"* ]]; then
-      sudo cp /etc/apt/sources.list /etc/apt/sources.list.bak && \
-      sudo sed -i 's/archive.ubuntu.com/mirrors.aliyun.com/g' /etc/apt/sources.list && \
-      sudo sed -i 's/security.ubuntu.com/mirrors.aliyun.com/g' /etc/apt/sources.list
-    fi
-    # if contains debian, set apt mirror to aliyun
-    if [[ $(getSysDist) == *"Debian"* ]]; then
-      sudo cp /etc/apt/sources.list /etc/apt/sources.list.bak && \
-      sudo sed -i 's/deb.debian.org/mirrors.aliyun.com/g' /etc/apt/sources.list && \
-      sudo sed -i 's/security.debian.org/mirrors.aliyun.com/g' /etc/apt/sources.list
+  # check if sources.list configured
+  if ! grep -q "mirrors.aliyun.com" /etc/apt/sources.list; then
+    if isInGFW; then
+      # if contains ubuntu, set apt mirror to aliyun
+      if [[ $(getSysDist) == *"Ubuntu"* ]]; then
+        sudo cp /etc/apt/sources.list /etc/apt/sources.list.bak && \
+        sudo sed -i 's/archive.ubuntu.com/mirrors.aliyun.com/g' /etc/apt/sources.list && \
+        sudo sed -i 's/security.ubuntu.com/mirrors.aliyun.com/g' /etc/apt/sources.list
+      fi
+      # if contains debian, set apt mirror to aliyun
+      if [[ $(getSysDist) == *"Debian"* ]]; then
+        sudo cp /etc/apt/sources.list /etc/apt/sources.list.bak && \
+        sudo sed -i 's/deb.debian.org/mirrors.aliyun.com/g' /etc/apt/sources.list && \
+        sudo sed -i 's/security.debian.org/mirrors.aliyun.com/g' /etc/apt/sources.list
+      fi
     fi
   fi
 }
@@ -48,7 +58,7 @@ function setupApt() {
 function setupApps() {
     # for ubuntu and debian
     sudo apt-get update && \
-    sudo apt-get install -y curl wget git zsh
+    sudo apt-get install -y curl wget git zsh tmux
   #  TODO:
   #  redhat/centos: yum install git
   #  archlinux: pacman -S git
@@ -90,8 +100,14 @@ function setupPython(){
 }
 
 function setupGit() {
+  # check if git user name and email is configured
+  if [ -z "$(git config --global user.name)" ]; then
+    echo "configuring git"
+  else
+    echo "git is configured"
+    return 0
+  fi
   # set git config
-  echo "configuring git"
   echo "please enter your git user name:"
   read git_user_name
   echo "please enter your git user email:"
@@ -161,8 +177,42 @@ function setUpZsh() {
   fi
 }
 
+function setUpDocker() {
+  # check docker is installed
+  if command -v docker &> /dev/null; then
+    printf "${GREEN}docker is already installed${NORMAL}\n"
+  else
+    printf "${BLUE}installing docker into your environment${NORMAL}\n"
+    if isInGFW; then
+      curl -fsSL https://get.daocloud.io/docker | bash
+    else
+      curl -sSL https://get.daocloud.io/docker | bash
+    fi
+    sudo chmod 666 /var/run/docker.sock
+    sudo usermod -aG docker $USER
+    sudo systemctl enable docker
+    sudo systemctl start docker
+    printf "${GREEN}docker is installed${NORMAL}\n"
+  fi
+  # check docker-compose is installed
+  if command -v docker-compose &> /dev/null; then
+    printf "${GREEN}docker-compose is already installed${NORMAL}\n"
+  else
+    printf "${BLUE}installing docker-compose into your environment${NORMAL}\n"
+    if isInGFW; then
+      sudo curl -L https://get.daocloud.io/docker/compose/releases/download/1.29.2/docker-compose-`uname -s`-`uname -m` -o /usr/local/bin/docker-compose && \
+      sudo chmod +x /usr/local/bin/docker-compose
+    else
+      sudo curl -L "https://github.com/docker/compose/releases/download/1.29.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose && \
+      sudo chmod +x /usr/local/bin/docker-compose
+    fi
+    printf "${GREEN}docker-compose is installed${NORMAL}\n"
+  fi
+}
+
 setupApt && \
 setupApps && \
 setUpZsh && \
 setupNode && \
-setupGit
+setupGit && \
+setUpDocker

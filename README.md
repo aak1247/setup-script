@@ -11,14 +11,16 @@ my personal shell set up script.
   - Support for 
     - Ubuntu
     - Debian
+- Git: Config git user.name & user.email and ssh key via prompts
 - Node: nvm & node & nrm & yarn & cnpm & pnpm
 - Python: (WIP) pyenv & python & pip & poetry & pipenv
 - Golang: (WIP) gvm & go
 - Rust: wip
-- Docker: (WIP) docker & docker-compose
+- Docker: docker & docker-compose
 - Mysql: wip
 - Pgsql: wip
 - Redis: wip
+- Tmux: wip
 - ......
 
 And all of this will be optional if you don't need it.
@@ -33,9 +35,11 @@ sh -c "$(curl -fsSL https://github.com/aak1247/setup_scripts/raw/master/install.
 sh -c "$(wget https://github.com/aak1247/setup_scripts/raw/master/install.sh -O -)"
 ```
 
+## Screenshot
+### Zsh
 And finally you will get this a beautify zsh! Don't worry your old `.zshrc` would have a backup as `.zshrc.back`.(if you have one.)
 
-![screen-shot](https://github.com/Thrimbda/shell-set-up/raw/master/screen_shot.png)
+![screen-shot](./screenshot/zsh.png)
 
 if you want to adopt my configuration, you can replace `DEFAULT_USER` variable with your username in `.zshrc` and uncomment it if you want (default is `$USER@$HOSTNAME`).
 
