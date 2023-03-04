@@ -17,9 +17,6 @@ my personal shell set up script.
 - Golang: (WIP) gvm & go
 - Rust: wip
 - Docker: docker & docker-compose
-- Mysql: wip
-- Pgsql: wip
-- Redis: wip
 - Tmux: wip
 - ......
 
