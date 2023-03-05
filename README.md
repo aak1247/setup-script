@@ -1,6 +1,5 @@
 # setup-scripts
 
-
 ## About 
 my personal shell set up script.
 
@@ -13,11 +12,13 @@ my personal shell set up script.
     - Debian
 - Git: Config git user.name & user.email and ssh key via prompts
 - Node: nvm & node & nrm & yarn & cnpm & pnpm
-- Python: (WIP) pyenv & python & pip & poetry & pipenv
-- Golang: (WIP) gvm & go
+- Python: pyenv & python & pip & poetry & pipenv
+- Golang: gvm & go (and config proxy & mirror automatically)
 - Rust: wip
+- Java: wip
 - Docker: docker & docker-compose
-- Tmux: wip
+- Tmux: tmux and config, based on [aak1247/.tmux](https://github.com/aak1247/.tmux)
+- ProxyChains: (WIP) ProxyChains and config
 - ......
 
 And all of this will be optional if you don't need it.
@@ -45,3 +46,4 @@ finally, **Do remember install an powerline+awesome([nerd](https://github.com/ry
 # Related 
 
 [Thrimbda/shell-set-up](https://github.com/Thrimbda/shell-set-up)
+[.tmux](https://github.com/aak1247/.tmux)

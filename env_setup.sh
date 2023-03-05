@@ -1,10 +1,77 @@
+GREEN="\033[32m"
+BLUE="\033[34m"
+YELLOW="\033[33m"
+RED="\033[31m"
+NORMAL="\033[0m"
+# github mirror
+GITHUB_MIRROR="kgithub.com"
+# workspace
+WORKSPACE=$(pwd)
+# HTTP_PROXY="http://172.168.1.206:7890"
+# HTTPS_PROXY="http://172.168.1.206:7890"
+# ALL_PROXY="socks5://172.168.1.206:7890"
+
+# python version
+PYTHON_VERSION="3.10.4"
+PYENV_VERSION=$PYTHON_VERSION
+# java version
+JAVA_VERSION=16
+# node version
+NODE_VERSION=16.0.0
+# go version
+GO_VERSION=1.20.1
+GO_MIRROR="https://golang.google.cn/dl"
+GO_PROXY="https://goproxy.cn,direct"
+
+BASHRC=~/.bashrc
+
+# exit when any command fails
+set -e
+
+function handle_error() {
+  echo "An error occurred."
+  exit 1
+}
+
+# trap error
+trap 'handle_error' ERR
+
+function checkNeedPrompt() {
+  printf "${YELLOW}Do you want to $1? [y/n]${NORMAL}\n"
+  read -r -n 1 -s answer
+  if [[ $answer != "y" ]]; then
+    return 1
+  else
+    return 0
+  fi
+}
+
+function checkCmdExist() {
+  if [ -f "$1" ]; then
+    return 0
+  fi
+  if command -v "$1" &> /dev/null; then
+    return 0
+  else
+    return 1
+  fi
+}
+
+function display_error() {
+	tput sgr0
+	tput setaf 1
+	echo "ERROR: $1"
+	tput sgr0
+	exit 1
+}
+
 # check if device is in GFW or not
 function isInGFW() {
     if command -v wget &> /dev/null; then
-      if wget -q --spider https://www.google.com/; then
-          echo "Google is accessible"
+      if wget --timeout=2 -q --spider https://www.google.com/; then
+          return 1
       else
-          echo "Google is not accessible"
+          return 0
       fi
     fi
     if ping -q -c 1 -W 1 google.com >/dev/null; then
@@ -13,6 +80,26 @@ function isInGFW() {
         return 0
     fi
 }
+
+function getIsInGFW() {
+    if isInGFW; then
+        echo true
+    else
+        echo false
+    fi
+}
+IS_IN_GFW=$(getIsInGFW)
+
+# get github mirror
+function getGithubMirror() {
+    if [ $IS_IN_GFW = true ]; then
+        echo $GITHUB_MIRROR
+    else
+        echo "github.com"
+    fi
+}
+REAL_GITHUB_MIRROR=$(getGithubMirror)
+printf "Will use ${GREEN}$REAL_GITHUB_MIRROR${NORMAL} as github mirror\n"
 
 # get system distribution
 function getSysDist() {
@@ -38,15 +125,15 @@ function getSysDist() {
 function setupApt() {
   # check if sources.list configured
   if ! grep -q "mirrors.aliyun.com" /etc/apt/sources.list; then
-    if isInGFW; then
+    if [ $IS_IN_GFW = true ]; then
       # if contains ubuntu, set apt mirror to aliyun
-      if [[ $(getSysDist) == *"Ubuntu"* ]]; then
+      if [[ $(getSysDist) == *"Ubuntu"* ]] || [[ $(getSysDist) == *"ubuntu"* ]]; then
         sudo cp /etc/apt/sources.list /etc/apt/sources.list.bak && \
         sudo sed -i 's/archive.ubuntu.com/mirrors.aliyun.com/g' /etc/apt/sources.list && \
         sudo sed -i 's/security.ubuntu.com/mirrors.aliyun.com/g' /etc/apt/sources.list
       fi
       # if contains debian, set apt mirror to aliyun
-      if [[ $(getSysDist) == *"Debian"* ]]; then
+      if [[ $(getSysDist) == *"Debian"* ]] || [[ $(getSysDist) == *"debian"* ]]; then
         sudo cp /etc/apt/sources.list /etc/apt/sources.list.bak && \
         sudo sed -i 's/deb.debian.org/mirrors.aliyun.com/g' /etc/apt/sources.list && \
         sudo sed -i 's/security.debian.org/mirrors.aliyun.com/g' /etc/apt/sources.list
@@ -55,33 +142,53 @@ function setupApt() {
   fi
 }
 
+# install apps
+
+function getApps() {
+  echo "curl wget git zsh tmux"
+}
+
 function setupApps() {
-    # for ubuntu and debian
-    sudo apt-get update && \
-    sudo apt-get install -y curl wget git zsh tmux
-  #  TODO:
-  #  redhat/centos: yum install git
-  #  archlinux: pacman -S git
-  #  mac:   brew install git
+  if checkNeedPrompt "install or update apps"; then
+    if [[ $(getSysDist) == *"Ubuntu"* ]] || [[ $(getSysDist) == *"ubuntu"* ]] || [[ $(getSysDist) == *"Debian"* ]] || [[ $(getSysDist) == *"debian"* ]]; then
+      sudo apt-get update && \
+      sudo apt-get install -y $(getApps) build-essential libssl-dev zlib1g-dev \
+          libbz2-dev libreadline-dev libsqlite3-dev curl \
+          libncursesw5-dev xz-utils tk-dev libxml2-dev libxmlsec1-dev libffi-dev liblzma-dev
+    elif [[ $(getSysDist) == *"CentOS"* ]]; then
+      sudo yum install -y $(getApps) gcc make zlib-devel bzip2 bzip2-devel readline-devel sqlite sqlite-devel openssl-devel tk-devel libffi-devel xz-devel
+    elif [[ $(getSysDist) == *"Arch"* ]]; then
+      sudo pacman -S --needed --noconfirm $(getApps)  base-devel openssl zlib xz tk
+    elif [[ $(getSysDist) == *"Mac"* ]]; then
+      brew install $(getApps) openssl readline sqlite3 xz zlib tcl-tk
+    else
+      display_error "unsupported system"
+    fi
+    printf "${GREEN}apps installed${NORMAL}\n"
+  fi
 }
 
 # 中国大陆访问github速度慢，需要使用github镜像
 function setupNode(){
-    if command -v nvm & > /dev/null; then
+    if checkCmdExist $NVM_DIR/nvm.sh; then
         printf "${GREEN}nvm is already installed${NORMAL}\n"
     else
         printf "${BLUE}install nvm into your environment${NORMAL}\n"
-        
-        if isInGFW; then
-            curl -o install_nvm.sh -L https://github.com/nvm-sh/nvm/raw/v0.39.3/install.sh && \
-            sed -i 's/https:\/\/github.com/https:\/\/github.com/g' install_nvm.sh && \
-            bash install_nvm.sh && \
-            sed -i 's/https:\/\/github.com/https:\/\/github.com/g' ~/.nvm/nvm.sh
+        return 0
+        if [ $IS_IN_GFW = true ]; then
+            curl -o .install_nvm.sh -L https://$GITHUB_MIRROR/nvm-sh/nvm/raw/v0.39.3/install.sh && \
+            sed -i 's/https:\/\/github.com/https:\/\/$GITHUB_MIRROR/g' .install_nvm.sh && \
+            bash .install_nvm.sh && \
+            sed -i 's/https:\/\/github.com/https:\/\/$GITHUB_MIRROR/g' ~/.nvm/nvm.sh
         else
             curl -o- https://github.com/nvm-sh/nvm/raw/v0.39.3/install.sh | bash
         fi
         export NVM_DIR="$([ -z "${XDG_CONFIG_HOME-}" ] && printf %s "${HOME}/.nvm" || printf %s "${XDG_CONFIG_HOME}/nvm")" && \
         [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh" && \ # This loads nvm
+        [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion" && \ # This loads nvm bash_completion
+        echo 'export NVM_DIR=\"$NVM_DIR\"' >> ~/.zshrc && \
+        echo '[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm' >> ~/.zshrc && \
+        echo '[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion' >> ~/.zshrc && \
         echo "source $NVM_DIR/nvm.sh" >> ~/.zshrc && \
         echo "source $NVM_DIR/nvm.sh" >> ~/.bashrc
         nvm install 16.0 && \
@@ -93,68 +200,147 @@ function setupNode(){
     fi
 }
 
-
 function setupPython(){
   # install python
-  echo "install python"
+  if checkCmdExist "$PYENV_ROOT/bin/pyenv"; then
+    printf "${GREEN}pyenv is already installed${NORMAL}\n"
+  else
+    printf "${BLUE}installing pyenv${NORMAL}\n"
+    set -e
+    set -o pipefail
+    if [ ! -f .install_python.sh ]; then
+      curl -L -o .install_python.sh https://$REAL_GITHUB_MIRROR/pyenv/pyenv-installer/raw/master/bin/pyenv-installer
+    fi
+    if [ $IS_IN_GFW = true ]; then
+      sed -i "s/github.com/$REAL_GITHUB_MIRROR/g" .install_python.sh
+    fi
+    bash .install_python.sh && \
+    echo 'export PYENV_ROOT="$HOME/.pyenv"' >> ~/.zshrc && \
+    echo 'command -v pyenv >/dev/null || export PATH="$PYENV_ROOT/bin:$PATH"' >> ~/.zshrc && \
+    echo 'eval "$(pyenv init -)"' >> ~/.zshrc && \
+    echo 'eval "$(pyenv virtualenv-init -)"' >> ~/.zshrc && \
+    echo 'export PYENV_ROOT="$HOME/.pyenv"' >> ~/.bashrc && \
+    echo 'command -v pyenv >/dev/null || export PATH="$PYENV_ROOT/bin:$PATH"' >> ~/.bashrc && \
+    echo 'eval "$(pyenv init -)"' >> ~/.bashrc && \
+    echo 'eval "$(pyenv virtualenv-init -)"' >> ~/.bashrc && \
+    sudo chmod +x pyinstall && \
+    cp pyinstall $PYENV_ROOT/bin/pyinstall && \
+    source $BASHRC && \
+    printf "${GREEN}pyenv is installed${NORMAL}\n"
+  fi
+  if pyenv versions | grep -q "$PYTHON_VERSION"; then
+    printf "${GREEN}python $PYTHON_VERSION is already installed${NORMAL}\n"
+  else
+    pyinstall $PYTHON_VERSION
+  fi
+  if checkCmdExist poetry; then
+    printf "${GREEN}poetry is already installed${NORMAL}\n"
+  else
+    if checkNeedPrompt "install poetry"; then
+      printf "${BLUE}installing poetry${NORMAL}\n"
+      curl -sSL https://install.python-poetry.org/ | pyenv exec python - && \
+      printf "${GREEN}poetry is installed${NORMAL}\n"
+      echo 'export PATH="/home/liuyahui/.local/bin:$PATH"' >> ~/.zshrc
+      echo 'export PATH="/home/liuyahui/.local/bin:$PATH"' >> ~/.bashrc
+    fi
+  fi
+  if checkCmdExist pipenv; then
+    printf "${GREEN}pipenv is already installed${NORMAL}\n"
+  else
+    if checkNeedPrompt "install pipenv"; then
+      printf "${BLUE}installing pipenv${NORMAL}\n"
+      pyenv shell $PYTHON_VERSION
+      pyenv exec pip install pipenv && \
+      printf "${GREEN}pipenv is installed${NORMAL}\n"
+    fi
+  fi
+  if [ $IS_IN_GFW = true ]; then
+    if checkNeedPrompt "Config pip mirror"; then
+      printf "${BLUE}Config pip mirror${NORMAL}\n"
+      pyenv shell $PYTHON_VERSION
+      pyenv exec pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
+      printf "${GREEN}Pip mirror successfully configured${NORMAL}\n"
+    fi
+  fi
 }
 
 function setupGit() {
   # check if git user name and email is configured
   if [ -z "$(git config --global user.name)" ]; then
-    echo "configuring git"
+    printf "${BLUE}configuring git${NORMAL}\n"
   else
-    echo "git is configured"
+    printf "${YELLOW}git is configured${NORMAL}\n"
     return 0
   fi
   # set git config
-  echo "please enter your git user name:"
+  printf "${YELLOW}please enter your git user name:${NORMAL}\n"
   read git_user_name
-  echo "please enter your git user email:"
+  printf "${YELLOW}please enter your git user email:${NORMAL}\n"
   read git_user_email
   git config --global user.name $git_user_name
   git config --global user.email $git_user_email
+  printf "${GREEN}git is configured, name: $git_user_name, email: $git_user_email${NORMAL}\n"
   # generate ssh key
-  echo "generating ssh key"
+  printf "${BLUE}generating ssh key${NORMAL}\n"
   ssh-keygen
-  echo "Your ssh key content: (ssh key path: ~/.ssh/id_rsa.pub)"
+  printf "${BLUE}Your ssh key content: (ssh key path: ~/.ssh/id_rsa.pub)$NORMAL\n"
   cat ~/.ssh/id_rsa.pub
   echo ""
-  echo "please add your ssh key to github"
+  printf "${YELLOW}please add your ssh key to github${NORMAL}\n"
 }
-
-# return all available golang versions
-function getAvailableGolangVersion() {
-  if isInGFW; then
-    curl -s https://golang.google.cn/dl/ | grep -oP 'go[0-9]+\.[0-9]+\.[0-9]+\.linux-amd64.tar.gz' | sed 's/.linux-amd64.tar.gz//g'
-  else
-    curl -s https://golang.org/dl/ | grep -oP 'go[0-9]+\.[0-9]+\.[0-9]+\.linux-amd64.tar.gz' | sed 's/.linux-amd64.tar.gz//g'
-  fi
-}
-
 
 function setupGolang(){
-  # choose golang version
-  local golang_version=$(getAvailableGolangVersion | fzf)
-  # download golang
-  if isInGFW; then
-    curl -O https://golang.google.cn/dl/${golang_version}.linux-amd64.tar.gz
+  # install golang
+  if checkCmdExist $HOME/.gvm/scripts/env/gvm; then
+    printf "${GREEN}gvm is already installed${NORMAL}\n"
   else
-    curl -O https://golang.org/dl/${golang_version}.linux-amd64.tar.gz
+    printf "${BLUE}installing gvm${NORMAL}\n"
+    if [ ! -f .install_golang.sh ]; then
+      curl -o .install_golang.sh -L https://$REAL_GITHUB_MIRROR/moovweb/gvm/raw/master/binscripts/gvm-installer
+    fi
+    bash .install_golang.sh
+    echo '[[ -s "$HOME/.gvm/scripts/gvm" ]] && source "$HOME/.gvm/scripts/gvm"' >> ~/.zshrc
+    if isInGFW ; then
+      # gvm listall set mirror
+      sed -i 's/github.com/$GITHUB_MIRROR/g' ~/.gvm/scripts/listall
+      sed -i '2a checkGFW' ~/.gvm/scripts/listall
+      # set mirror for gvm install (source)
+      sed -i 's/github.com/$GITHUB_MIRROR/g' ~/.gvm/scripts/install
+      sed -i '2a checkGFW' ~/.gvm/scripts/install
+      # set mirror for gvm install (binary)
+      echo 'export GO_BINARY_BASE_URL="$GO_MIRROR"' >> ~/.zshrc
+      echo 'export GO_BINARY_BASE_URL="$GO_MIRROR"' >> ~/.bashrc
+    fi
   fi
-  # extract golang
-  tar -C /usr/local -xzf ${golang_version}.linux-amd64.tar.gz && \
-  # add golang to PATH
-  echo "export PATH=$PATH:/usr/local/go/bin" >> ~/.zshrc && \
-  echo "export PATH=$PATH:/usr/local/go/bin" >> ~/.bashrc && \
-  # remove golang tarball
-  rm -rf ${golang_version}.linux-amd64.tar.gz
+  if checkCmdExist go; then
+    printf "${GREEN}golang is already installed${NORMAL}\n"
+  else
+    printf "${BLUE}installing golang${NORMAL}\n"
+    gvm install go$GO_VERSION -B && \
+    sudo chmod +x $HOME/.gvm/scripts/env/gvm && \
+    $HOME/.gvm/scripts/env/gvm use $GO_VERSION --default && \
+    go env -w GO111MODULE=on && \
+    go env -w GOPROXY=$GO_PROXY && \
+    printf "${GREEN}golang is installed${NORMAL}\n" || \
+    printf "${RED}golang is not installed${NORMAL}\n"
+    # TODO: goprivate Config
+  fi
 }
 
 
 function setupJava(){
   # install java
-  echo "install java"
+  # Add the Oracle Java PPA to the system
+  sudo add-apt-repository ppa:linuxuprising/java -y
+
+  # Update the package index
+  sudo apt-get update
+
+  # Set the debconf selections to automatically accept the Oracle license
+  sudo echo oracle-java${JAVA_VERSION}-installer shared/accepted-oracle-license-v1-2 select true | sudo /usr/bin/debconf-set-selections
+
+  # Install Oracle Java
+  sudo apt-get install -y oracle-java${JAVA_VERSION}-installer
 }
 
 
@@ -168,13 +354,13 @@ function setUpZsh() {
   # if exists oh-my-zsh, skip
   if [ -d ~/.oh-my-zsh ]; then
     printf "${GREEN}oh-my-zsh is already installed${NORMAL}\n"
-  else
-    if isInGFW; then
-      sed -i 's/https:\/\/github.com/https:\/\/github.com/g' ./install_zsh.sh && \
-      sed -i 's/https:\/\/raw.githubusercontent.com/https:\/\/raw.github.com/g' ./install_zsh.sh
-    fi
-    bash ./install_zsh.sh
+    return 0
   fi
+  if [ $IS_IN_GFW = true ]; then
+    sed -i 's/https:\/\/github.com/https:\/\/$GITHUB_MIRROR/g' ./install_zsh.sh && \
+    sed -i 's/https:\/\/raw.githubusercontent.com/https:\/\/raw.$GITHUB_MIRROR/g' ./install_zsh.sh
+  fi
+  bash ./install_zsh.sh
 }
 
 function setUpDocker() {
@@ -183,7 +369,7 @@ function setUpDocker() {
     printf "${GREEN}docker is already installed${NORMAL}\n"
   else
     printf "${BLUE}installing docker into your environment${NORMAL}\n"
-    if isInGFW; then
+    if [ $IS_IN_GFW = true ]; then
       curl -fsSL https://get.daocloud.io/docker | bash
     else
       curl -sSL https://get.daocloud.io/docker | bash
@@ -199,7 +385,7 @@ function setUpDocker() {
     printf "${GREEN}docker-compose is already installed${NORMAL}\n"
   else
     printf "${BLUE}installing docker-compose into your environment${NORMAL}\n"
-    if isInGFW; then
+    if [ $IS_IN_GFW = true ]; then
       sudo curl -L https://get.daocloud.io/docker/compose/releases/download/1.29.2/docker-compose-`uname -s`-`uname -m` -o /usr/local/bin/docker-compose && \
       sudo chmod +x /usr/local/bin/docker-compose
     else
@@ -210,9 +396,31 @@ function setUpDocker() {
   fi
 }
 
+function setUpTmux() {
+  cd ~
+  if [ -d .tmux ]; then
+    printf "${YELLOW}tmux is already configured${NORMAL}\n"
+    cd $WORKSPACE
+    return 0
+  fi
+  printf "${BLUE}configuring tmux${NORMAL}\n" && \
+  git clone https://$REAL_GITHUB_MIRROR/aak1247/.tmux.git && \
+  ln -s -f .tmux/.tmux.conf && \
+  cp .tmux/.tmux.conf.local . && \
+  printf "${GREEN}tmux is configured${NORMAL}\n" && \
+  cd $WORKSPACE
+}
+
+source $BASHRC && \
 setupApt && \
 setupApps && \
 setUpZsh && \
 setupNode && \
 setupGit && \
-setUpDocker
+setUpDocker && \
+setUpTmux && \
+setupPython && \
+setupGolang && \
+# setupJava && \
+# setupRust && \
+printf "${GREEN}Congratulations, your env is ready${NORMAL}\n"

@@ -1,1 +1,3 @@
-install_nvm.sh
+.install_nvm.sh
+.install_python.sh
+.install_golang.sh

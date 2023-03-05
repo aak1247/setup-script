@@ -1,0 +1,19 @@
+function isInGFW() {
+    if command -v wget &> /dev/null; then
+      if wget --timeout=2 -q --spider https://www.google.com/; then
+          return 1
+      else
+          return 0
+      fi
+    fi
+    if ping -q -c 1 -W 1 google.com >/dev/null; then
+        return 1
+    else
+        return 0
+    fi
+}
+if isInGFW; then
+    GITHUB_MIRROR="kgithub.com"
+else
+    GITHUB_MIRROR="github.com"
+fi

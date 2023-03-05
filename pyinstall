@@ -1,0 +1,9 @@
+#! /bin/bash
+GREEN="\033[32m"
+BLUE="\033[34m"
+NORMAL="\033[0m"
+v=$1
+printf "${BLUE}installing python $v${NORMAL}\n"
+curl -L https://npm.taobao.org/mirrors/python/$v/Python-$v.tar.xz -o ~/.pyenv/cache/Python-$v.tar.xz
+pyenv install $v
+printf "${GREEN}python $v installed${NORMAL}\n"

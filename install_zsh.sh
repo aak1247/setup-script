@@ -154,6 +154,7 @@ main() {
     printf "${YELLOW}I don't know where did you get this script.${NORMAL} Please install curl or wget first!\n"
     exit
   fi
+  ln -s -T ~/.zshrc ~/.zprofile
   sed "/^export ZSH=/ c\\
   export ZSH=\"$ZSH\"
   " ~/.zshrc > ~/.zshrc-omztemp
