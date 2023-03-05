@@ -45,5 +45,5 @@ finally, **Do remember install an powerline+awesome([nerd](https://github.com/ry
 
 # Related 
 
-[Thrimbda/shell-set-up](https://github.com/Thrimbda/shell-set-up)
-[.tmux](https://github.com/aak1247/.tmux)
+- [Thrimbda/shell-set-up](https://github.com/Thrimbda/shell-set-up)
+- [.tmux](https://github.com/aak1247/.tmux)
