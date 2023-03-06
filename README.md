@@ -1,12 +1,14 @@
 # setup-scripts
 
-## About 
-my personal shell set up script.
+English | [简体中文](./README.zh-CN.md)
 
-### Stack
+## About 
+my personal Posix env set up script.
+
+### Features
 
 - Shell: Based on **[oh-my-zsh](https://ohmyz.sh/)** install script and [shell-set-up](https://github.com/Thrimbda/shell-set-up)
-- System: git/github ssh-key/apt mirror
+- System: git/apt mirror/some tools
   - Support for 
     - Ubuntu
     - Debian
@@ -23,7 +25,7 @@ my personal shell set up script.
 
 And all of this will be optional if you don't need it.
 
-## Usage:
+### Usage:
 
 ```bash
 # via curl
@@ -43,7 +45,7 @@ if you want to adopt my configuration, you can replace `DEFAULT_USER` variable w
 
 finally, **Do remember install an powerline+awesome([nerd](https://github.com/ryanoasis/nerd-fonts)) font** (here is [meslo](https://github.com/aak1247/setup-scripts/raw/master/font/Meslo%20LG%20M%20Regular%20Nerd%20Font%20Complete.otf) which I am using) to show all these wonderful stuff!
 
-# Related 
+## Related 
 
 - [Thrimbda/shell-set-up](https://github.com/Thrimbda/shell-set-up)
 - [.tmux](https://github.com/aak1247/.tmux)
