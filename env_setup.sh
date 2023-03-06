@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 GREEN="\033[32m"
 BLUE="\033[34m"
 YELLOW="\033[33m"
@@ -14,8 +15,9 @@ WORKSPACE=$(pwd)
 # python version
 PYTHON_VERSION="3.10.4"
 PYENV_VERSION=$PYTHON_VERSION
-# java version
-JAVA_VERSION=16
+PIP_MIRROR="https://pypi.tuna.tsinghua.edu.cn/simple"
+# java version (available: 11, 17)
+JAVA_VERSION=17
 # node version
 NODE_VERSION=16.0.0
 # go version
@@ -67,65 +69,66 @@ function display_error() {
 
 # check if device is in GFW or not
 function isInGFW() {
-    if command -v wget &> /dev/null; then
-      if wget --timeout=2 -q --spider https://www.google.com/; then
-          return 1
-      else
-          return 0
-      fi
-    fi
-    if ping -q -c 1 -W 1 google.com >/dev/null; then
-        return 1
+  if command -v wget &> /dev/null; then
+    if wget --timeout=2 -q --spider https://www.google.com/; then
+      return 1
     else
-        return 0
+      return 0
     fi
+  fi
+  if ping -q -c 1 -W 1 google.com >/dev/null; then
+    return 1
+  else
+    return 0
+  fi
 }
 
 function getIsInGFW() {
-    if isInGFW; then
-        echo true
-    else
-        echo false
-    fi
+  if isInGFW; then
+    echo true
+  else
+    echo false
+  fi
 }
 IS_IN_GFW=$(getIsInGFW)
 
 # get github mirror
 function getGithubMirror() {
-    if [ $IS_IN_GFW = true ]; then
-        echo $GITHUB_MIRROR
-    else
-        echo "github.com"
-    fi
+  if [ $IS_IN_GFW = true ]; then
+    echo $GITHUB_MIRROR
+  else
+    echo "github.com"
+  fi
 }
 REAL_GITHUB_MIRROR=$(getGithubMirror)
 printf "Will use ${GREEN}$REAL_GITHUB_MIRROR${NORMAL} as github mirror\n"
 
 # get system distribution
 function getSysDist() {
-    if [ -f /etc/os-release ]; then
-        . /etc/os-release
-        echo $ID
-    elif type lsb_release >/dev/null 2>&1; then
-        lsb_release -i | cut -d: -f2 | sed s/'^\t'//
-    elif [ -f /etc/lsb-release ]; then
-        . /etc/lsb-release
-        echo $DISTRIB_ID
-    elif [ -f /etc/debian_version ]; then
-        echo Debian
-    elif [ -f /etc/SuSE-release ]; then
-        echo SUSE
-    elif [ -f /etc/redhat-release ]; then
-        echo RedHat
-    else
-        echo unknown
-    fi
+  if [ -f /etc/os-release ]; then
+    . /etc/os-release
+    echo $ID
+  elif type lsb_release >/dev/null 2>&1; then
+    lsb_release -i | cut -d: -f2 | sed s/'^\t'//
+  elif [ -f /etc/lsb-release ]; then
+    . /etc/lsb-release
+    echo $DISTRIB_ID
+  elif [ -f /etc/debian_version ]; then
+    echo Debian
+  elif [ -f /etc/SuSE-release ]; then
+    echo SUSE
+  elif [ -f /etc/redhat-release ]; then
+    echo RedHat
+  else
+    echo unknown
+  fi
 }
 
 function setupApt() {
   # check if sources.list configured
   if ! grep -q "mirrors.aliyun.com" /etc/apt/sources.list; then
     if [ $IS_IN_GFW = true ]; then
+      printf "${YELLOW}You are in GFW, will use aliyun mirror${NORMAL}\n"
       # if contains ubuntu, set apt mirror to aliyun
       if [[ $(getSysDist) == *"Ubuntu"* ]] || [[ $(getSysDist) == *"ubuntu"* ]]; then
         sudo cp /etc/apt/sources.list /etc/apt/sources.list.bak && \
@@ -138,23 +141,25 @@ function setupApt() {
         sudo sed -i 's/deb.debian.org/mirrors.aliyun.com/g' /etc/apt/sources.list && \
         sudo sed -i 's/security.debian.org/mirrors.aliyun.com/g' /etc/apt/sources.list
       fi
+      printf "${GREEN}apt mirror successfully configured${NORMAL}\n"
     fi
   fi
 }
 
 # install apps
-
 function getApps() {
-  echo "curl wget git zsh tmux"
+  # return apps list
+  echo "curl wget git zsh tmux proxychains"
 }
 
 function setupApps() {
+  # install needed apps
   if checkNeedPrompt "install or update apps"; then
     if [[ $(getSysDist) == *"Ubuntu"* ]] || [[ $(getSysDist) == *"ubuntu"* ]] || [[ $(getSysDist) == *"Debian"* ]] || [[ $(getSysDist) == *"debian"* ]]; then
       sudo apt-get update && \
       sudo apt-get install -y $(getApps) build-essential libssl-dev zlib1g-dev \
-          libbz2-dev libreadline-dev libsqlite3-dev curl \
-          libncursesw5-dev xz-utils tk-dev libxml2-dev libxmlsec1-dev libffi-dev liblzma-dev
+        libbz2-dev libreadline-dev libsqlite3-dev curl \
+        libncursesw5-dev xz-utils tk-dev libxml2-dev libxmlsec1-dev libffi-dev liblzma-dev software-properties-common
     elif [[ $(getSysDist) == *"CentOS"* ]]; then
       sudo yum install -y $(getApps) gcc make zlib-devel bzip2 bzip2-devel readline-devel sqlite sqlite-devel openssl-devel tk-devel libffi-devel xz-devel
     elif [[ $(getSysDist) == *"Arch"* ]]; then
@@ -164,47 +169,50 @@ function setupApps() {
     else
       display_error "unsupported system"
     fi
-    printf "${GREEN}apps installed${NORMAL}\n"
+    printf "${GREEN}apps successfully installed${NORMAL}\n"
   fi
 }
 
-# 中国大陆访问github速度慢，需要使用github镜像
 function setupNode(){
-    if checkCmdExist $NVM_DIR/nvm.sh; then
-        printf "${GREEN}nvm is already installed${NORMAL}\n"
+  if checkCmdExist $NVM_DIR/nvm.sh; then
+    printf "${GREEN}nvm is already installed${NORMAL}\n"
+  else
+    # install nvm
+    printf "${BLUE}install nvm into your environment${NORMAL}\n"
+    return 0
+    if [ $IS_IN_GFW = true ]; then
+      curl -o .install_nvm.sh -L https://$GITHUB_MIRROR/nvm-sh/nvm/raw/v0.39.3/install.sh && \
+      sed -i 's/https:\/\/github.com/https:\/\/$GITHUB_MIRROR/g' .install_nvm.sh && \
+      bash .install_nvm.sh && \
+      sed -i 's/https:\/\/github.com/https:\/\/$GITHUB_MIRROR/g' ~/.nvm/nvm.sh
     else
-        printf "${BLUE}install nvm into your environment${NORMAL}\n"
-        return 0
-        if [ $IS_IN_GFW = true ]; then
-            curl -o .install_nvm.sh -L https://$GITHUB_MIRROR/nvm-sh/nvm/raw/v0.39.3/install.sh && \
-            sed -i 's/https:\/\/github.com/https:\/\/$GITHUB_MIRROR/g' .install_nvm.sh && \
-            bash .install_nvm.sh && \
-            sed -i 's/https:\/\/github.com/https:\/\/$GITHUB_MIRROR/g' ~/.nvm/nvm.sh
-        else
-            curl -o- https://github.com/nvm-sh/nvm/raw/v0.39.3/install.sh | bash
-        fi
-        export NVM_DIR="$([ -z "${XDG_CONFIG_HOME-}" ] && printf %s "${HOME}/.nvm" || printf %s "${XDG_CONFIG_HOME}/nvm")" && \
-        [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh" && \ # This loads nvm
-        [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion" && \ # This loads nvm bash_completion
-        echo 'export NVM_DIR=\"$NVM_DIR\"' >> ~/.zshrc && \
-        echo '[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm' >> ~/.zshrc && \
-        echo '[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion' >> ~/.zshrc && \
-        echo "source $NVM_DIR/nvm.sh" >> ~/.zshrc && \
-        echo "source $NVM_DIR/nvm.sh" >> ~/.bashrc
-        nvm install 16.0 && \
-        nvm use 16.0 && \
-        npm install -g nrm yarn pnpm cnpm
-        if isInGFW; then
-          nrm use taobao
-        fi
+      curl -o- https://github.com/nvm-sh/nvm/raw/v0.39.3/install.sh | bash
     fi
+    export NVM_DIR="$([ -z "${XDG_CONFIG_HOME-}" ] && printf %s "${HOME}/.nvm" || printf %s "${XDG_CONFIG_HOME}/nvm")" && \
+    [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh" && \ # This loads nvm
+    [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion" && \ # This loads nvm bash_completion
+    echo 'export NVM_DIR=\"$NVM_DIR\"' >> ~/.zshrc && \
+    echo '[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm' >> ~/.zshrc && \
+    echo '[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion' >> ~/.zshrc && \
+    echo "source $NVM_DIR/nvm.sh" >> ~/.zshrc && \
+    echo "source $NVM_DIR/nvm.sh" >> ~/.bashrc && \
+    printf "${GREEN}nvm successfully installed${NORMAL}\n" && \
+    source $BASHRC && \
+    nvm install $NODE_VERSION && \
+    nvm use $NODE_VERSION && \
+    npm install -g nrm yarn pnpm cnpm # install nrm / yarn / pnpm / cnpm
+    if isInGFW; then
+      nrm use taobao
+    fi
+    printf "${GREEN}nodev$NODE_VERSION and nrm / yarn / pnpm / cnpm are successfully installed${NORMAL}\n"
+  fi
 }
 
 function setupPython(){
-  # install python
   if checkCmdExist "$PYENV_ROOT/bin/pyenv"; then
     printf "${GREEN}pyenv is already installed${NORMAL}\n"
   else
+    # install pyenv
     printf "${BLUE}installing pyenv${NORMAL}\n"
     set -e
     set -o pipefail
@@ -233,6 +241,7 @@ function setupPython(){
   else
     pyinstall $PYTHON_VERSION
   fi
+  # install poetry
   if checkCmdExist poetry; then
     printf "${GREEN}poetry is already installed${NORMAL}\n"
   else
@@ -244,6 +253,7 @@ function setupPython(){
       echo 'export PATH="/home/liuyahui/.local/bin:$PATH"' >> ~/.bashrc
     fi
   fi
+  # install pipenv
   if checkCmdExist pipenv; then
     printf "${GREEN}pipenv is already installed${NORMAL}\n"
   else
@@ -254,11 +264,12 @@ function setupPython(){
       printf "${GREEN}pipenv is installed${NORMAL}\n"
     fi
   fi
+  # 配置pip镜像
   if [ $IS_IN_GFW = true ]; then
     if checkNeedPrompt "Config pip mirror"; then
       printf "${BLUE}Config pip mirror${NORMAL}\n"
       pyenv shell $PYTHON_VERSION
-      pyenv exec pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
+      pyenv exec pip config set global.index-url $PIP_MIRROR
       printf "${GREEN}Pip mirror successfully configured${NORMAL}\n"
     fi
   fi
@@ -311,17 +322,18 @@ function setupGolang(){
       echo 'export GO_BINARY_BASE_URL="$GO_MIRROR"' >> ~/.zshrc
       echo 'export GO_BINARY_BASE_URL="$GO_MIRROR"' >> ~/.bashrc
     fi
+    printf "${GREEN}gvm is successfully installed${NORMAL}\n"
   fi
   if checkCmdExist go; then
     printf "${GREEN}golang is already installed${NORMAL}\n"
   else
     printf "${BLUE}installing golang${NORMAL}\n"
+    [[ -s "$HOME/.gvm/scripts/gvm" ]] && source "$HOME/.gvm/scripts/gvm"
     gvm install go$GO_VERSION -B && \
-    sudo chmod +x $HOME/.gvm/scripts/env/gvm && \
-    $HOME/.gvm/scripts/env/gvm use $GO_VERSION --default && \
+    gvm use $GO_VERSION --default && \
     go env -w GO111MODULE=on && \
     go env -w GOPROXY=$GO_PROXY && \
-    printf "${GREEN}golang is installed${NORMAL}\n" || \
+    printf "${GREEN}golang is successfully installed${NORMAL}\n" || \
     printf "${RED}golang is not installed${NORMAL}\n"
     # TODO: goprivate Config
   fi
@@ -330,23 +342,39 @@ function setupGolang(){
 
 function setupJava(){
   # install java
-  # Add the Oracle Java PPA to the system
-  sudo add-apt-repository ppa:linuxuprising/java -y
+  if checkCmdExist java; then
+    printf "${GREEN}java is already installed${NORMAL}\n"
+  else
+    pritnf "${BLUE}installing java${NORMAL}\n"
+    # Add the Oracle Java PPA to the system
+    sudo add-apt-repository ppa:linuxuprising/java -y
 
-  # Update the package index
-  sudo apt-get update
+    # Update the package index （this will surpass public key check）
+    sudo apt-get update | grep NO_PUBKEY | awk '{print $5}' | xargs sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys
+    sudo apt-get update
 
-  # Set the debconf selections to automatically accept the Oracle license
-  sudo echo oracle-java${JAVA_VERSION}-installer shared/accepted-oracle-license-v1-2 select true | sudo /usr/bin/debconf-set-selections
+    # Set the debconf selections to automatically accept the Oracle license
+    sudo echo oracle-java${JAVA_VERSION}-installer shared/accepted-oracle-license-v1-2 select true | sudo /usr/bin/debconf-set-selections
 
-  # Install Oracle Java
-  sudo apt-get install -y oracle-java${JAVA_VERSION}-installer
+    # Install Oracle Java
+    sudo apt-get install -y oracle-java${JAVA_VERSION}-installer
+
+    pritnf "${GREEN}java is successfully installed${NORMAL}\n"
+  fi
 }
 
 
 function setupRust(){
   # install rust
-  echo "install rust"
+  if checkCmdExist rustc; then
+    printf "${GREEN}rust is already installed${NORMAL}\n"
+  else
+    printf "${BLUE}installing rust${NORMAL}\n"
+    curl https://sh.rustup.rs -sSf | sh && \
+    echo '. "$HOME/.cargo/env"' >> ~/.zshrc && \
+    echo '. "$HOME/.cargo/env"' >> ~/.bashrc && \
+    printf "${GREEN}rust is successfully installed${NORMAL}\n"
+  fi
 }
 
 function setUpZsh() {
@@ -421,6 +449,6 @@ setUpDocker && \
 setUpTmux && \
 setupPython && \
 setupGolang && \
-# setupJava && \
-# setupRust && \
+setupJava && \
+setupRust && \
 printf "${GREEN}Congratulations, your env is ready${NORMAL}\n"

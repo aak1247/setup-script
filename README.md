@@ -8,7 +8,7 @@ my personal Posix env set up script.
 ### Features
 
 - Shell: Based on **[oh-my-zsh](https://ohmyz.sh/)** install script and [shell-set-up](https://github.com/Thrimbda/shell-set-up)
-- System: git/apt mirror/some tools
+- System: git/apt mirror/some tools (including proxychains)
   - Support for 
     - Ubuntu
     - Debian
@@ -16,14 +16,13 @@ my personal Posix env set up script.
 - Node: nvm & node & nrm & yarn & cnpm & pnpm
 - Python: pyenv & python & pip & poetry & pipenv
 - Golang: gvm & go (and config proxy & mirror automatically)
-- Rust: wip
-- Java: wip
+- Rust: includes cargo / rustc / rustdoc / rustfmt / ruststd, with [rustup](https://www.rust-lang.org/tools/install)
+- Java: Support for JDK 11, 17, with [ppa:linuxuprising/java](https://launchpad.net/~linuxuprising/+archive/ubuntu/java)
 - Docker: docker & docker-compose
 - Tmux: tmux and config, based on [aak1247/.tmux](https://github.com/aak1247/.tmux)
-- ProxyChains: (WIP) ProxyChains and config
 - ......
 
-And all of this will be optional if you don't need it.
+And all of this will be optional if you don't need it.(WIP)
 
 ### Usage:
 

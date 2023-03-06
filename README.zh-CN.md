@@ -8,7 +8,7 @@
 ### 功能
 
 - Shell：基于 **[oh-my-zsh](https://ohmyz.sh/)** 安装脚本和 [shell-set-up](https://github.com/Thrimbda/shell-set-up)。
-- 系统：git/apt mirror/一些其他工具
+- 系统：git/apt mirror/一些其他工具(含 proxychains)
   - 目前支持以下操作系统 
     - Ubuntu
     - Debian
@@ -16,14 +16,11 @@
 - Node：nvm & node & nrm & yarn & cnpm & pnpm。
 - Python：pyenv & python & pip & poetry & pipenv。
 - Golang：gvm & go（并自动配置代理和镜像）。
-- Rust：开发中
-- Java：开发中
+- Rust：含 cargo / rustc / rustdoc / rustfmt / ruststd, 基于 [rustup](https://www.rust-lang.org/tools/install)
+- Java：支持JDK 11, 17, 基于 [ppa:linuxuprising/java](https://launchpad.net/~linuxuprising/+archive/ubuntu/java)
 - Docker：docker & docker-compose。
 - Tmux：tmux 和配置，基于 [aak1247/.tmux](https://github.com/aak1247/.tmux)。
-- ProxyChains：开发中
 - ......
-
-如果您不需要这些组件，可以自由选择。
 
 ### 用法:
 
