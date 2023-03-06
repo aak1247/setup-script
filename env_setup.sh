@@ -149,7 +149,7 @@ function setupApt() {
 # install apps
 function getApps() {
   # return apps list
-  echo "curl wget git zsh tmux proxychains"
+  echo "curl wget git zsh tmux proxychains-ng"
 }
 
 function setupApps() {
