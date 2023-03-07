@@ -24,6 +24,7 @@ NODE_VERSION=16.0.0
 GO_VERSION=1.20.1
 GO_MIRROR="https://golang.google.cn/dl"
 GO_PROXY="https://goproxy.cn,direct"
+GO_PRIVATE="gitlab.hive-intel.com"
 
 BASHRC=~/.bashrc
 
@@ -173,6 +174,24 @@ function setupApps() {
   fi
 }
 
+# configure ssh public key
+function setupSSH() {
+  if checkNeedPrompt "configure ssh public key"; then
+    if [ ! -f ~/.ssh/authorized_keys ]; then
+      if [ ! -d ~/.ssh ]; then
+        mkdir -p ~/.ssh && \
+        chmod 700 ~/.ssh
+      fi
+      touch ~/.ssh/authorized_keys && \
+      chmod 600 ~/.ssh/authorized_keys
+      printf "${YELLOW}Enter your public key:${NORMAL}\n"
+      read -r PUBLIC_KEY
+      echo $PUBLIC_KEY >> ~/.ssh/authorized_keys && \
+      printf "${GREEN}ssh public key successfully configured${NORMAL}\n"
+    fi
+  fi
+}
+
 function setupNode(){
   if checkCmdExist $NVM_DIR/nvm.sh; then
     printf "${GREEN}nvm is already installed${NORMAL}\n"
@@ -279,25 +298,42 @@ function setupGit() {
   # check if git user name and email is configured
   if [ -z "$(git config --global user.name)" ]; then
     printf "${BLUE}configuring git${NORMAL}\n"
+    # set git config
+    printf "${YELLOW}please enter your git user name:${NORMAL}\n"
+    read git_user_name
+    printf "${YELLOW}please enter your git user email:${NORMAL}\n"
+    read git_user_email
+    git config --global user.name $git_user_name
+    git config --global user.email $git_user_email
+    printf "${GREEN}git is configured, name: $git_user_name, email: $git_user_email${NORMAL}\n"
+    # generate ssh key
+    printf "${BLUE}generating ssh key${NORMAL}\n"
+    ssh-keygen
+    printf "${BLUE}Your ssh key content: (ssh key path: ~/.ssh/id_rsa.pub)$NORMAL\n"
+    cat ~/.ssh/id_rsa.pub
+    echo ""
+    printf "${YELLOW}please add your ssh key to github${NORMAL}\n"
   else
     printf "${YELLOW}git is configured${NORMAL}\n"
-    return 0
   fi
-  # set git config
-  printf "${YELLOW}please enter your git user name:${NORMAL}\n"
-  read git_user_name
-  printf "${YELLOW}please enter your git user email:${NORMAL}\n"
-  read git_user_email
-  git config --global user.name $git_user_name
-  git config --global user.email $git_user_email
-  printf "${GREEN}git is configured, name: $git_user_name, email: $git_user_email${NORMAL}\n"
-  # generate ssh key
-  printf "${BLUE}generating ssh key${NORMAL}\n"
-  ssh-keygen
-  printf "${BLUE}Your ssh key content: (ssh key path: ~/.ssh/id_rsa.pub)$NORMAL\n"
-  cat ~/.ssh/id_rsa.pub
-  echo ""
-  printf "${YELLOW}please add your ssh key to github${NORMAL}\n"
+  if checkNeedPrompt "configure git private token"; then
+    printf "${BLUE}configuring private token${NORMAL}\n"
+    printf "${YELLOW}please enter your git private token:${NORMAL}\n"
+    read git_private_token
+    git config --global http.extraheader "PRIVATE-TOKEN: $git_private_token"
+    username=$(git config --global user.name)
+    printf "${YELLOW}please enter your git private url:${NORMAL}\n"
+    read git_private
+    printf "${YELLOW}please enter your git private port: (default 22) ${NORMAL}\n"
+    read git_private_port
+    if [ -z "$git_private_port" ]; then
+      git_private_port=22
+    fi
+    git config --global url.ssh://git@$git_private:$git_private_port/.insteadOf https://$git_private/
+    printf "${GREEN}private token is configured${NORMAL}\n"
+  fi
+  printf "${BLUE}Your git config:${NORMAL}\n"
+  git config --global --list
 }
 
 function setupGolang(){
@@ -333,6 +369,7 @@ function setupGolang(){
     gvm use $GO_VERSION --default && \
     go env -w GO111MODULE=on && \
     go env -w GOPROXY=$GO_PROXY && \
+    go env -w GOPRIVATE=$GO_PRIVATE && \
     printf "${GREEN}golang is successfully installed${NORMAL}\n" || \
     printf "${RED}golang is not installed${NORMAL}\n"
     # TODO: goprivate Config
@@ -361,6 +398,7 @@ function setupJava(){
 
     pritnf "${GREEN}java is successfully installed${NORMAL}\n"
   fi
+  # TODO: maven / maven mirror / gradle / gradle mirror
 }
 
 
@@ -373,6 +411,12 @@ function setupRust(){
     curl https://sh.rustup.rs -sSf | sh && \
     echo '. "$HOME/.cargo/env"' >> ~/.zshrc && \
     echo '. "$HOME/.cargo/env"' >> ~/.bashrc && \
+    touch $HOME/.cargo/.config
+    echo '[source.crates-io]
+registry = "https://github.com/rust-lang/crates.io-index"
+replace-with = "ustc"
+[source.ustc]
+registry = "git://mirrors.ustc.edu.cn/crates.io-index"' >> $HOME/.cargo/.config
     printf "${GREEN}rust is successfully installed${NORMAL}\n"
   fi
 }
@@ -442,6 +486,7 @@ function setUpTmux() {
 source $BASHRC && \
 setupApt && \
 setupApps && \
+setupSSH && \
 setUpZsh && \
 setupNode && \
 setupGit && \
