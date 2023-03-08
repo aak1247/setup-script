@@ -71,7 +71,7 @@ function display_error() {
 # check if device is in GFW or not
 function isInGFW() {
   if command -v wget &> /dev/null; then
-    if wget --timeout=2 -q --spider https://www.google.com/; then
+    if wget --timeout=1 -q --spider https://www.google.com/; then
       return 1
     else
       return 0
