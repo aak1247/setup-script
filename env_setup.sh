@@ -197,8 +197,7 @@ function setupNode(){
     printf "${GREEN}nvm is already installed${NORMAL}\n"
   else
     # install nvm
-    printf "${BLUE}install nvm into your environment${NORMAL}\n"
-    return 0
+    printf "${BLUE}installing nvm into your environment${NORMAL}\n"
     if [ $IS_IN_GFW = true ]; then
       curl -o .install_nvm.sh -L https://$GITHUB_MIRROR/nvm-sh/nvm/raw/v0.39.3/install.sh && \
       sed -i 's/https:\/\/github.com/https:\/\/$GITHUB_MIRROR/g' .install_nvm.sh && \
@@ -441,8 +440,8 @@ function setUpZsh() {
     return 0
   fi
   if [ $IS_IN_GFW = true ]; then
-    sed -i 's/https:\/\/github.com/https:\/\/$GITHUB_MIRROR/g' ./install_zsh.sh && \
-    sed -i 's/https:\/\/raw.githubusercontent.com/https:\/\/raw.$GITHUB_MIRROR/g' ./install_zsh.sh
+    sed -i "s/https:\/\/github.com/https:\/\/$GITHUB_MIRROR/g" ./install_zsh.sh && \
+    sed -i "s/https:\/\/raw.githubusercontent.com/https:\/\/raw.$GITHUB_MIRROR/g" ./install_zsh.sh
   fi
   bash ./install_zsh.sh
 }
