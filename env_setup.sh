@@ -294,7 +294,9 @@ function setupPython(){
   fi
 }
 
+# Configure git
 function setupGit() {
+  local configured=false
   # check if git user name and email is configured
   if [ -z "$(git config --global user.name)" ]; then
     printf "${BLUE}configuring git${NORMAL}\n"
@@ -313,6 +315,7 @@ function setupGit() {
     cat ~/.ssh/id_rsa.pub
     echo ""
     printf "${YELLOW}please add your ssh key to github${NORMAL}\n"
+    configured=false
   else
     printf "${YELLOW}git is configured${NORMAL}\n"
   fi
@@ -324,16 +327,25 @@ function setupGit() {
     username=$(git config --global user.name)
     printf "${YELLOW}please enter your git private url:${NORMAL}\n"
     read git_private
-    printf "${YELLOW}please enter your git private port: (default 22) ${NORMAL}\n"
+    printf "${YELLOW}please enter your git private ssh port: (default 22) ${NORMAL}\n"
     read git_private_port
     if [ -z "$git_private_port" ]; then
       git_private_port=22
     fi
-    git config --global url.ssh://git@$git_private:$git_private_port/.insteadOf https://$git_private/
-    printf "${GREEN}private token is configured${NORMAL}\n"
+    printf "${YELLOW}please enter your git private https port: (default 443) ${NORMAL}\n"
+    read git_private_https_port
+    if [ -z "$git_private_https_port" ]; then
+      git_private_https_port=443
+    fi
+    git config --global url.ssh://git@$git_private:$git_private_port/%s.git.insteadOf https://$git_private/%s.git
+    git config --global url.https://$username:$git_private_token@$git_private:$git_private_https_port/%s.insteadOf https://$git_private/%s
+    printf "${GREEN}private git is configured${NORMAL}\n"
+    configured=true
   fi
-  printf "${BLUE}Your git config:${NORMAL}\n"
-  git config --global --list
+  if $configured; then
+    printf "${BLUE}Your git config:${NORMAL}\n"
+    git config --global --list
+  fi
 }
 
 function setupGolang(){
@@ -468,6 +480,7 @@ function setUpDocker() {
   fi
 }
 
+# set up tmux
 function setUpTmux() {
   cd ~
   if [ -d .tmux ]; then
@@ -483,6 +496,21 @@ function setUpTmux() {
   cd $WORKSPACE
 }
 
+function setupNix() {
+  if checkCmdExist nix; then
+    printf "${GREEN}nix is already installed${NORMAL}\n"
+    return 0
+  else
+    printf "${BLUE}installing nix${NORMAL}\n"
+    sh <(curl -L https://nixos.org/nix/install) --daemon && \
+    if [ $? -eq 0 ]; then
+      printf "${GREEN}nix is successfully installed${NORMAL}\n"
+    else
+      printf "${RED}nix is not installed${NORMAL}\n"
+    fi
+  fi
+}
+
 source $BASHRC && \
 setupApt && \
 setupApps && \
@@ -496,4 +524,5 @@ setupPython && \
 setupGolang && \
 setupJava && \
 setupRust && \
+setupNix && \
 printf "${GREEN}Congratulations, your env is ready${NORMAL}\n"
