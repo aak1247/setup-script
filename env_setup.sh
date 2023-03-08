@@ -393,7 +393,7 @@ function setupJava(){
   if checkCmdExist java; then
     printf "${GREEN}java is already installed${NORMAL}\n"
   else
-    pritnf "${BLUE}installing java${NORMAL}\n"
+    printf "${BLUE}installing java${NORMAL}\n"
     # Add the Oracle Java PPA to the system
     sudo add-apt-repository ppa:linuxuprising/java -y
 
@@ -407,7 +407,7 @@ function setupJava(){
     # Install Oracle Java
     sudo apt-get install -y oracle-java${JAVA_VERSION}-installer
 
-    pritnf "${GREEN}java is successfully installed${NORMAL}\n"
+    printf "${GREEN}java is successfully installed${NORMAL}\n"
   fi
   # TODO: maven / maven mirror / gradle / gradle mirror
 }
