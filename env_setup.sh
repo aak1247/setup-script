@@ -200,9 +200,9 @@ function setupNode(){
     printf "${BLUE}installing nvm into your environment${NORMAL}\n"
     if [ $IS_IN_GFW = true ]; then
       curl -o .install_nvm.sh -L https://$GITHUB_MIRROR/nvm-sh/nvm/raw/v0.39.3/install.sh && \
-      sed -i 's/https:\/\/github.com/https:\/\/$GITHUB_MIRROR/g' .install_nvm.sh && \
+      sed -i "s/https:\/\/github.com/https:\/\/$GITHUB_MIRROR/g" .install_nvm.sh && \
       bash .install_nvm.sh && \
-      sed -i 's/https:\/\/github.com/https:\/\/$GITHUB_MIRROR/g' ~/.nvm/nvm.sh
+      sed -i "s/https:\/\/github.com/https:\/\/$GITHUB_MIRROR/g" ~/.nvm/nvm.sh
     else
       curl -o- https://github.com/nvm-sh/nvm/raw/v0.39.3/install.sh | bash
     fi
@@ -360,10 +360,10 @@ function setupGolang(){
     echo '[[ -s "$HOME/.gvm/scripts/gvm" ]] && source "$HOME/.gvm/scripts/gvm"' >> ~/.zshrc
     if isInGFW ; then
       # gvm listall set mirror
-      sed -i 's/github.com/$GITHUB_MIRROR/g' ~/.gvm/scripts/listall
+      sed -i "s/github.com/$GITHUB_MIRROR/g" ~/.gvm/scripts/listall
       sed -i '2a checkGFW' ~/.gvm/scripts/listall
       # set mirror for gvm install (source)
-      sed -i 's/github.com/$GITHUB_MIRROR/g' ~/.gvm/scripts/install
+      sed -i "s/github.com/$GITHUB_MIRROR/g" ~/.gvm/scripts/install
       sed -i '2a checkGFW' ~/.gvm/scripts/install
       # set mirror for gvm install (binary)
       echo 'export GO_BINARY_BASE_URL="$GO_MIRROR"' >> ~/.zshrc
