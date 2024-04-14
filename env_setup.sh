@@ -43,6 +43,7 @@ function checkNeedPrompt() {
   printf "${YELLOW}Do you want to $1? [y/n]${NORMAL}\n"
   read -r -n 1 -s answer
   if [[ $answer != "y" ]]; then
+    printf "Skipped $1\n"
     return 1
   else
     return 0
