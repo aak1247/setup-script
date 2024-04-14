@@ -193,102 +193,106 @@ function setupSSH() {
 }
 
 function setupNode() {
-  if checkCmdExist $NVM_DIR/nvm.sh; then
-    printf "${GREEN}nvm is already installed${NORMAL}\n"
-  else
-    # install nvm
-    printf "${BLUE}installing nvm into your environment${NORMAL}\n"
-    if [ $IS_IN_GFW = true ]; then
-      curl -o .install_nvm.sh -L https://$GITHUB_MIRROR/nvm-sh/nvm/raw/v0.39.3/install.sh &&
-        sed -i "s/https:\/\/github.com/https:\/\/$GITHUB_MIRROR/g" .install_nvm.sh &&
-        bash .install_nvm.sh &&
-        sed -i "s/https:\/\/github.com/https:\/\/$GITHUB_MIRROR/g" ~/.nvm/nvm.sh
+  if checkNeedPrompt "install node"; then
+    if checkCmdExist $NVM_DIR/nvm.sh; then
+      printf "${GREEN}nvm is already installed${NORMAL}\n"
     else
-      curl -o- https://github.com/nvm-sh/nvm/raw/v0.39.3/install.sh | bash
+      # install nvm
+      printf "${BLUE}installing nvm into your environment${NORMAL}\n"
+      if [ $IS_IN_GFW = true ]; then
+        curl -o .install_nvm.sh -L https://$GITHUB_MIRROR/nvm-sh/nvm/raw/v0.39.3/install.sh &&
+          sed -i "s/https:\/\/github.com/https:\/\/$GITHUB_MIRROR/g" .install_nvm.sh &&
+          bash .install_nvm.sh &&
+          sed -i "s/https:\/\/github.com/https:\/\/$GITHUB_MIRROR/g" ~/.nvm/nvm.sh
+      else
+        curl -o- https://github.com/nvm-sh/nvm/raw/v0.39.3/install.sh | bash
+      fi
+      export NVM_DIR="$([ -z "${XDG_CONFIG_HOME-}" ] && printf %s "${HOME}/.nvm" || printf %s "${XDG_CONFIG_HOME}/nvm")" &&
+        [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh" && \ # This loads nvm
+      [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion" && \ # This loads nvm bash_completion
+      echo 'export NVM_DIR=\"$NVM_DIR\"' >>~/.zshrc &&
+        echo '[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm' >>~/.zshrc &&
+        echo '[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion' >>~/.zshrc &&
+        echo "source $NVM_DIR/nvm.sh" >>~/.zshrc &&
+        echo "source $NVM_DIR/nvm.sh" >>~/.bashrc &&
+        printf "${GREEN}nvm successfully installed${NORMAL}\n" &&
+        source $BASHRC &&
+        nvm install $NODE_VERSION &&
+        nvm use $NODE_VERSION &&
+        npm install -g nrm yarn pnpm cnpm # install nrm / yarn / pnpm / cnpm
+      if isInGFW; then
+        nrm use taobao
+      fi
+      printf "${GREEN}nodev$NODE_VERSION and nrm / yarn / pnpm / cnpm are successfully installed${NORMAL}\n"
     fi
-    export NVM_DIR="$([ -z "${XDG_CONFIG_HOME-}" ] && printf %s "${HOME}/.nvm" || printf %s "${XDG_CONFIG_HOME}/nvm")" &&
-      [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh" && \ # This loads nvm
-    [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion" && \ # This loads nvm bash_completion
-    echo 'export NVM_DIR=\"$NVM_DIR\"' >>~/.zshrc &&
-      echo '[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm' >>~/.zshrc &&
-      echo '[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion' >>~/.zshrc &&
-      echo "source $NVM_DIR/nvm.sh" >>~/.zshrc &&
-      echo "source $NVM_DIR/nvm.sh" >>~/.bashrc &&
-      printf "${GREEN}nvm successfully installed${NORMAL}\n" &&
-      source $BASHRC &&
-      nvm install $NODE_VERSION &&
-      nvm use $NODE_VERSION &&
-      npm install -g nrm yarn pnpm cnpm # install nrm / yarn / pnpm / cnpm
-    if isInGFW; then
-      nrm use taobao
-    fi
-    printf "${GREEN}nodev$NODE_VERSION and nrm / yarn / pnpm / cnpm are successfully installed${NORMAL}\n"
   fi
 }
 
 function setupPython() {
-  if checkCmdExist "$PYENV_ROOT/bin/pyenv"; then
-    printf "${GREEN}pyenv is already installed${NORMAL}\n"
-  else
-    # install pyenv
-    printf "${BLUE}installing pyenv${NORMAL}\n"
-    set -e
-    set -o pipefail
-    if [ ! -f .install_python.sh ]; then
-      curl -L -o .install_python.sh https://$REAL_GITHUB_MIRROR/pyenv/pyenv-installer/raw/master/bin/pyenv-installer
+  if checkNeedPrompt "install python"; then
+    if checkCmdExist "$PYENV_ROOT/bin/pyenv"; then
+      printf "${GREEN}pyenv is already installed${NORMAL}\n"
+    else
+      # install pyenv
+      printf "${BLUE}installing pyenv${NORMAL}\n"
+      set -e
+      set -o pipefail
+      if [ ! -f .install_python.sh ]; then
+        curl -L -o .install_python.sh https://$REAL_GITHUB_MIRROR/pyenv/pyenv-installer/raw/master/bin/pyenv-installer
+      fi
+      if [ $IS_IN_GFW = true ]; then
+        sed -i "s/github.com/$REAL_GITHUB_MIRROR/g" .install_python.sh
+      fi
+      bash .install_python.sh &&
+        echo 'export PYENV_ROOT="$HOME/.pyenv"' >>~/.zshrc &&
+        echo 'command -v pyenv >/dev/null || export PATH="$PYENV_ROOT/bin:$PATH"' >>~/.zshrc &&
+        echo 'eval "$(pyenv init -)"' >>~/.zshrc &&
+        echo 'eval "$(pyenv virtualenv-init -)"' >>~/.zshrc &&
+        echo 'export PYENV_ROOT="$HOME/.pyenv"' >>~/.bashrc &&
+        echo 'command -v pyenv >/dev/null || export PATH="$PYENV_ROOT/bin:$PATH"' >>~/.bashrc &&
+        echo 'eval "$(pyenv init -)"' >>~/.bashrc &&
+        echo 'eval "$(pyenv virtualenv-init -)"' >>~/.bashrc &&
+        sudo chmod +x pyinstall &&
+        cp pyinstall $PYENV_ROOT/bin/pyinstall &&
+        source $BASHRC &&
+        printf "${GREEN}pyenv is installed${NORMAL}\n"
     fi
+    if pyenv versions | grep -q "$PYTHON_VERSION"; then
+      printf "${GREEN}python $PYTHON_VERSION is already installed${NORMAL}\n"
+    else
+      pyinstall $PYTHON_VERSION
+    fi
+    # install poetry
+    if checkCmdExist poetry; then
+      printf "${GREEN}poetry is already installed${NORMAL}\n"
+    else
+      if checkNeedPrompt "install poetry"; then
+        printf "${BLUE}installing poetry${NORMAL}\n"
+        curl -sSL https://install.python-poetry.org/ | pyenv exec python - &&
+          printf "${GREEN}poetry is installed${NORMAL}\n"
+        echo 'export PATH="/home/liuyahui/.local/bin:$PATH"' >>~/.zshrc
+        echo 'export PATH="/home/liuyahui/.local/bin:$PATH"' >>~/.bashrc
+      fi
+    fi
+    # install pipenv
+    if checkCmdExist pipenv; then
+      printf "${GREEN}pipenv is already installed${NORMAL}\n"
+    else
+      if checkNeedPrompt "install pipenv"; then
+        printf "${BLUE}installing pipenv${NORMAL}\n"
+        pyenv shell $PYTHON_VERSION
+        pyenv exec pip install pipenv &&
+          printf "${GREEN}pipenv is installed${NORMAL}\n"
+      fi
+    fi
+    # 配置pip镜像
     if [ $IS_IN_GFW = true ]; then
-      sed -i "s/github.com/$REAL_GITHUB_MIRROR/g" .install_python.sh
-    fi
-    bash .install_python.sh &&
-      echo 'export PYENV_ROOT="$HOME/.pyenv"' >>~/.zshrc &&
-      echo 'command -v pyenv >/dev/null || export PATH="$PYENV_ROOT/bin:$PATH"' >>~/.zshrc &&
-      echo 'eval "$(pyenv init -)"' >>~/.zshrc &&
-      echo 'eval "$(pyenv virtualenv-init -)"' >>~/.zshrc &&
-      echo 'export PYENV_ROOT="$HOME/.pyenv"' >>~/.bashrc &&
-      echo 'command -v pyenv >/dev/null || export PATH="$PYENV_ROOT/bin:$PATH"' >>~/.bashrc &&
-      echo 'eval "$(pyenv init -)"' >>~/.bashrc &&
-      echo 'eval "$(pyenv virtualenv-init -)"' >>~/.bashrc &&
-      sudo chmod +x pyinstall &&
-      cp pyinstall $PYENV_ROOT/bin/pyinstall &&
-      source $BASHRC &&
-      printf "${GREEN}pyenv is installed${NORMAL}\n"
-  fi
-  if pyenv versions | grep -q "$PYTHON_VERSION"; then
-    printf "${GREEN}python $PYTHON_VERSION is already installed${NORMAL}\n"
-  else
-    pyinstall $PYTHON_VERSION
-  fi
-  # install poetry
-  if checkCmdExist poetry; then
-    printf "${GREEN}poetry is already installed${NORMAL}\n"
-  else
-    if checkNeedPrompt "install poetry"; then
-      printf "${BLUE}installing poetry${NORMAL}\n"
-      curl -sSL https://install.python-poetry.org/ | pyenv exec python - &&
-        printf "${GREEN}poetry is installed${NORMAL}\n"
-      echo 'export PATH="/home/liuyahui/.local/bin:$PATH"' >>~/.zshrc
-      echo 'export PATH="/home/liuyahui/.local/bin:$PATH"' >>~/.bashrc
-    fi
-  fi
-  # install pipenv
-  if checkCmdExist pipenv; then
-    printf "${GREEN}pipenv is already installed${NORMAL}\n"
-  else
-    if checkNeedPrompt "install pipenv"; then
-      printf "${BLUE}installing pipenv${NORMAL}\n"
-      pyenv shell $PYTHON_VERSION
-      pyenv exec pip install pipenv &&
-        printf "${GREEN}pipenv is installed${NORMAL}\n"
-    fi
-  fi
-  # 配置pip镜像
-  if [ $IS_IN_GFW = true ]; then
-    if checkNeedPrompt "Config pip mirror"; then
-      printf "${BLUE}Config pip mirror${NORMAL}\n"
-      pyenv shell $PYTHON_VERSION
-      pyenv exec pip config set global.index-url $PIP_MIRROR
-      printf "${GREEN}Pip mirror successfully configured${NORMAL}\n"
+      if checkNeedPrompt "Config pip mirror"; then
+        printf "${BLUE}Config pip mirror${NORMAL}\n"
+        pyenv shell $PYTHON_VERSION
+        pyenv exec pip config set global.index-url $PIP_MIRROR
+        printf "${GREEN}Pip mirror successfully configured${NORMAL}\n"
+      fi
     fi
   fi
 }
@@ -348,85 +352,93 @@ function setupGit() {
 }
 
 function setupGolang() {
-  # install golang
-  if checkCmdExist $HOME/.gvm/scripts/env/gvm; then
-    printf "${GREEN}gvm is already installed${NORMAL}\n"
-  else
-    printf "${BLUE}installing gvm${NORMAL}\n"
-    if [ ! -f .install_golang.sh ]; then
-      curl -o .install_golang.sh -L https://$REAL_GITHUB_MIRROR/moovweb/gvm/raw/master/binscripts/gvm-installer
+  if checkNeedPrompt "install golang"; then
+    #FIXME: outdated
+    # install golang
+    if checkCmdExist $HOME/.gvm/scripts/env/gvm; then
+      printf "${GREEN}gvm is already installed${NORMAL}\n"
+    else
+      printf "${BLUE}installing gvm${NORMAL}\n"
+      if [ ! -f .install_golang.sh ]; then
+        curl -o .install_golang.sh -L https://$REAL_GITHUB_MIRROR/moovweb/gvm/raw/master/binscripts/gvm-installer
+      fi
+      bash .install_golang.sh
+      echo '[[ -s "$HOME/.gvm/scripts/gvm" ]] && source "$HOME/.gvm/scripts/gvm"' >>~/.zshrc
+      if isInGFW; then
+        # gvm listall set mirror
+        sed -i "s/github.com/$GITHUB_MIRROR/g" ~/.gvm/scripts/listall
+        sed -i '2a checkGFW' ~/.gvm/scripts/listall
+        # set mirror for gvm install (source)
+        sed -i "s/github.com/$GITHUB_MIRROR/g" ~/.gvm/scripts/install
+        sed -i '2a checkGFW' ~/.gvm/scripts/install
+        # set mirror for gvm install (binary)
+        echo 'export GO_BINARY_BASE_URL="$GO_MIRROR"' >>~/.zshrc
+        echo 'export GO_BINARY_BASE_URL="$GO_MIRROR"' >>~/.bashrc
+      fi
+      printf "${GREEN}gvm is successfully installed${NORMAL}\n"
     fi
-    bash .install_golang.sh
-    echo '[[ -s "$HOME/.gvm/scripts/gvm" ]] && source "$HOME/.gvm/scripts/gvm"' >>~/.zshrc
-    if isInGFW; then
-      # gvm listall set mirror
-      sed -i "s/github.com/$GITHUB_MIRROR/g" ~/.gvm/scripts/listall
-      sed -i '2a checkGFW' ~/.gvm/scripts/listall
-      # set mirror for gvm install (source)
-      sed -i "s/github.com/$GITHUB_MIRROR/g" ~/.gvm/scripts/install
-      sed -i '2a checkGFW' ~/.gvm/scripts/install
-      # set mirror for gvm install (binary)
-      echo 'export GO_BINARY_BASE_URL="$GO_MIRROR"' >>~/.zshrc
-      echo 'export GO_BINARY_BASE_URL="$GO_MIRROR"' >>~/.bashrc
+    if checkCmdExist go; then
+      printf "${GREEN}golang is already installed${NORMAL}\n"
+    else
+      printf "${BLUE}installing golang${NORMAL}\n"
+      [[ -s "$HOME/.gvm/scripts/gvm" ]] && source "$HOME/.gvm/scripts/gvm"
+      gvm install go$GO_VERSION -B &&
+        gvm use $GO_VERSION --default &&
+        go env -w GO111MODULE=on &&
+        go env -w GOPROXY=$GO_PROXY &&
+        go env -w GOPRIVATE=$GO_PRIVATE &&
+        printf "${GREEN}golang is successfully installed${NORMAL}\n" ||
+        printf "${RED}golang is not installed${NORMAL}\n"
+      # TODO: goprivate Config
     fi
-    printf "${GREEN}gvm is successfully installed${NORMAL}\n"
-  fi
-  if checkCmdExist go; then
-    printf "${GREEN}golang is already installed${NORMAL}\n"
-  else
-    printf "${BLUE}installing golang${NORMAL}\n"
-    [[ -s "$HOME/.gvm/scripts/gvm" ]] && source "$HOME/.gvm/scripts/gvm"
-    gvm install go$GO_VERSION -B &&
-      gvm use $GO_VERSION --default &&
-      go env -w GO111MODULE=on &&
-      go env -w GOPROXY=$GO_PROXY &&
-      go env -w GOPRIVATE=$GO_PRIVATE &&
-      printf "${GREEN}golang is successfully installed${NORMAL}\n" ||
-      printf "${RED}golang is not installed${NORMAL}\n"
-    # TODO: goprivate Config
   fi
 }
 
 function setupJava() {
+  #FIXME: outdated
   # install java
-  if checkCmdExist java; then
-    printf "${GREEN}java is already installed${NORMAL}\n"
-  else
-    printf "${BLUE}installing java${NORMAL}\n"
-    # Add the Oracle Java PPA to the system
-    sudo add-apt-repository ppa:linuxuprising/java -y
+  if checkNeedPrompt "install java"; then
+    if checkCmdExist java; then
+      printf "${GREEN}java is already installed${NORMAL}\n"
+    else
+      printf "${BLUE}installing java${NORMAL}\n"
+      # Add the Oracle Java PPA to the system
+      sudo add-apt-repository ppa:linuxuprising/java -y
 
-    # Update the package index （this will surpass public key check）
-    sudo apt-get update | grep NO_PUBKEY | awk '{print $5}' | xargs sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys
-    sudo apt-get update
+      # Update the package index （this will surpass public key check）
+      sudo apt-get update | grep NO_PUBKEY | awk '{print $5}' | xargs sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys
+      sudo apt-get update
 
-    # Set the debconf selections to automatically accept the Oracle license
-    sudo echo oracle-java${JAVA_VERSION}-installer shared/accepted-oracle-license-v1-2 select true | sudo /usr/bin/debconf-set-selections
+      # Set the debconf selections to automatically accept the Oracle license
+      sudo echo oracle-java${JAVA_VERSION}-installer shared/accepted-oracle-license-v1-2 select true | sudo /usr/bin/debconf-set-selections
 
-    # Install Oracle Java
-    sudo apt-get install -y oracle-java${JAVA_VERSION}-installer
+      # Install Oracle Java
+      sudo apt-get install -y oracle-java${JAVA_VERSION}-installer
 
-    printf "${GREEN}java is successfully installed${NORMAL}\n"
-  fi
+      printf "${GREEN}java is successfully installed${NORMAL}\n"
+    fi
   # TODO: maven / maven mirror / gradle / gradle mirror
+  fi
 }
 
 function setupRust() {
-  # install rust
-  if checkCmdExist rustc; then
-    printf "${GREEN}rust is already installed${NORMAL}\n"
-  else
-    printf "${BLUE}installing rust${NORMAL}\n"
-    curl https://sh.rustup.rs -sSf | sh &&
-      echo '. "$HOME/.cargo/env"' >>~/.zshrc &&
-      echo '. "$HOME/.cargo/env"' >>~/.bashrc &&
-      touch $HOME/.cargo/.config
-    echo '[source.crates-io]
+  if checkNeedPrompt "install rust"; then
+    # install rust
+    if checkCmdExist rustc; then
+      printf "${GREEN}rust is already installed${NORMAL}\n"
+    else
+      printf "${BLUE}installing rust${NORMAL}\n"
+      curl https://sh.rustup.rs -sSf | sh &&
+        echo '. "$HOME/.cargo/env"' >>~/.zshrc &&
+        echo '. "$HOME/.cargo/env"' >>~/.bashrc &&
+        touch $HOME/.cargo/.config
+      echo '[source.crates-io]
 registry = "https://github.com/rust-lang/crates.io-index"
 replace-with = "ustc"
 [source.ustc]
 registry = "git://mirrors.ustc.edu.cn/crates.io-index"' >>$HOME/.cargo/.config
-    printf "${GREEN}rust is successfully installed${NORMAL}\n"
+      printf "${GREEN}rust is successfully installed${NORMAL}\n"
+    fi
   fi
 }
 
@@ -491,17 +503,20 @@ function setUpTmux() {
 }
 
 function setupNix() {
-  if checkCmdExist nix; then
-    printf "${GREEN}nix is already installed${NORMAL}\n"
-    return 0
-  else
-    printf "${BLUE}installing nix${NORMAL}\n"
-    sh <(curl -L https://nixos.org/nix/install) --daemon &&
-      if [ $? -eq 0 ]; then
-        printf "${GREEN}nix is successfully installed${NORMAL}\n"
-      else
-        printf "${RED}nix is not installed${NORMAL}\n"
-      fi
+  if checkNeedPrompt "install nix"; then
+    #FIXME: need proxy
+    if checkCmdExist nix; then
+      printf "${GREEN}nix is already installed${NORMAL}\n"
+      return 0
+    else
+      printf "${BLUE}installing nix${NORMAL}\n"
+      sh <(curl -L https://nixos.org/nix/install) --daemon &&
+        if [ $? -eq 0 ]; then
+          printf "${GREEN}nix is successfully installed${NORMAL}\n"
+        else
+          printf "${RED}nix is not installed${NORMAL}\n"
+        fi
+    fi
   fi
 }
 
