@@ -201,17 +201,17 @@ function setupNode() {
       # install nvm
       printf "${BLUE}installing nvm into your environment${NORMAL}\n"
       if [ $IS_IN_GFW = true ]; then
-        curl -o .install_nvm.sh -L https://$GITHUB_MIRROR/nvm-sh/nvm/raw/v0.39.3/install.sh &&
+        curl -o .install_nvm.sh -L https://$GITHUB_MIRROR/nvm-sh/nvm/raw/v0.39.7/install.sh &&
           sed -i "s/https:\/\/github.com/https:\/\/$GITHUB_MIRROR/g" .install_nvm.sh &&
           bash .install_nvm.sh &&
           sed -i "s/https:\/\/github.com/https:\/\/$GITHUB_MIRROR/g" ~/.nvm/nvm.sh
       else
-        curl -o- https://github.com/nvm-sh/nvm/raw/v0.39.3/install.sh | bash
+        curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
       fi
       export NVM_DIR="$([ -z "${XDG_CONFIG_HOME-}" ] && printf %s "${HOME}/.nvm" || printf %s "${XDG_CONFIG_HOME}/nvm")" &&
         [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh" && \ # This loads nvm
       [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion" && \ # This loads nvm bash_completion
-      echo 'export NVM_DIR=\"$NVM_DIR\"' >>~/.zshrc &&
+      echo 'export NVM_DIR="$HOME/.nvm"' >>~/.zshrc &&
         echo '[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm' >>~/.zshrc &&
         echo '[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion' >>~/.zshrc &&
         echo "source $NVM_DIR/nvm.sh" >>~/.zshrc &&
