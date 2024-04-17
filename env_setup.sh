@@ -69,6 +69,48 @@ function display_error() {
   exit 1
 }
 
+# select function
+select_option() {
+  choices=("$@")  # declare options as global variables
+  selected=0      # initialize options
+
+  while true; do
+    tput cuu $((${#choices[@]}))
+
+    # Clear lines where options are printed
+    tput ed
+    for index in "${!choices[@]}"; do
+      if [ $index -eq $selected ]; then
+        printf "${GREEN} ${choices[$index]}${NORMAL}\n"  # highlight selected
+      else
+        echo "  ${choices[$index]}"
+      fi
+    done
+
+    read -n1 -s key  # read key
+
+    case "$key" in
+      A)  # up
+        if [ $selected -gt 0 ]; then
+          selected=$((selected - 1))
+        fi
+        ;;
+      B)  # down
+        if [ $selected -lt $(( ${#choices[@]} - 1 )) ]; then
+          selected=$((selected + 1))
+        fi
+        ;;
+      "")  # enter
+        break
+        ;;
+    esac
+  done
+
+  # print selected
+  selected_option="${choices[$selected]}"
+  echo "selected：$selected_option"
+}
+
 # check if device is in GFW or not
 function isInGFW() {
   if command -v wget &>/dev/null; then
@@ -189,6 +231,8 @@ function setupSSH() {
       read -r PUBLIC_KEY
       echo $PUBLIC_KEY >>~/.ssh/authorized_keys &&
         printf "${GREEN}ssh public key successfully configured${NORMAL}\n"
+    else
+      printf "authorized_keys already existed\n"
     fi
   fi
 }
@@ -231,69 +275,78 @@ function setupNode() {
 
 function setupPython() {
   if checkNeedPrompt "install python"; then
-    if checkCmdExist "$PYENV_ROOT/bin/pyenv"; then
-      printf "${GREEN}pyenv is already installed${NORMAL}\n"
-    else
-      # install pyenv
-      printf "${BLUE}installing pyenv${NORMAL}\n"
-      set -e
-      set -o pipefail
-      if [ ! -f .install_python.sh ]; then
-        curl -L -o .install_python.sh https://$REAL_GITHUB_MIRROR/pyenv/pyenv-installer/raw/master/bin/pyenv-installer
+    # with pyenv or conda
+    options=("pyenv" "miniforge")
+    select_option "${options[@]}"
+    if [[ $selected_option == "pyenv" ]]; then
+      if checkCmdExist "$PYENV_ROOT/bin/pyenv"; then
+        printf "${GREEN}pyenv is already installed${NORMAL}\n"
+      else
+        # install pyenv
+        printf "${BLUE}installing pyenv${NORMAL}\n"
+        set -e
+        set -o pipefail
+        if [ ! -f .install_python.sh ]; then
+          curl -L -o .install_python.sh https://$REAL_GITHUB_MIRROR/pyenv/pyenv-installer/raw/master/bin/pyenv-installer
+        fi
+        if [ $IS_IN_GFW = true ]; then
+          sed -i "s/github.com/$REAL_GITHUB_MIRROR/g" .install_python.sh
+        fi
+        bash .install_python.sh &&
+          echo 'export PYENV_ROOT="$HOME/.pyenv"' >>~/.zshrc &&
+          echo 'command -v pyenv >/dev/null || export PATH="$PYENV_ROOT/bin:$PATH"' >>~/.zshrc &&
+          echo 'eval "$(pyenv init -)"' >>~/.zshrc &&
+          echo 'eval "$(pyenv virtualenv-init -)"' >>~/.zshrc &&
+          echo 'export PYENV_ROOT="$HOME/.pyenv"' >>~/.bashrc &&
+          echo 'command -v pyenv >/dev/null || export PATH="$PYENV_ROOT/bin:$PATH"' >>~/.bashrc &&
+          echo 'eval "$(pyenv init -)"' >>~/.bashrc &&
+          echo 'eval "$(pyenv virtualenv-init -)"' >>~/.bashrc &&
+          sudo chmod +x pyinstall &&
+          cp pyinstall $PYENV_ROOT/bin/pyinstall &&
+          source $BASHRC &&
+          printf "${GREEN}pyenv is installed${NORMAL}\n"
       fi
+      if pyenv versions | grep -q "$PYTHON_VERSION"; then
+        printf "${GREEN}python $PYTHON_VERSION is already installed${NORMAL}\n"
+      else
+        pyinstall $PYTHON_VERSION
+      fi
+      # install poetry
+      if checkCmdExist poetry; then
+        printf "${GREEN}poetry is already installed${NORMAL}\n"
+      else
+        if checkNeedPrompt "install poetry"; then
+          printf "${BLUE}installing poetry${NORMAL}\n"
+          curl -sSL https://install.python-poetry.org/ | pyenv exec python - &&
+            printf "${GREEN}poetry is installed${NORMAL}\n"
+          echo 'export PATH="/home/liuyahui/.local/bin:$PATH"' >>~/.zshrc
+          echo 'export PATH="/home/liuyahui/.local/bin:$PATH"' >>~/.bashrc
+        fi
+      fi
+      # install pipenv
+      if checkCmdExist pipenv; then
+        printf "${GREEN}pipenv is already installed${NORMAL}\n"
+      else
+        if checkNeedPrompt "install pipenv"; then
+          printf "${BLUE}installing pipenv${NORMAL}\n"
+          pyenv shell $PYTHON_VERSION
+          pyenv exec pip install pipenv &&
+            printf "${GREEN}pipenv is installed${NORMAL}\n"
+        fi
+      fi
+      # 配置pip镜像
       if [ $IS_IN_GFW = true ]; then
-        sed -i "s/github.com/$REAL_GITHUB_MIRROR/g" .install_python.sh
-      fi
-      bash .install_python.sh &&
-        echo 'export PYENV_ROOT="$HOME/.pyenv"' >>~/.zshrc &&
-        echo 'command -v pyenv >/dev/null || export PATH="$PYENV_ROOT/bin:$PATH"' >>~/.zshrc &&
-        echo 'eval "$(pyenv init -)"' >>~/.zshrc &&
-        echo 'eval "$(pyenv virtualenv-init -)"' >>~/.zshrc &&
-        echo 'export PYENV_ROOT="$HOME/.pyenv"' >>~/.bashrc &&
-        echo 'command -v pyenv >/dev/null || export PATH="$PYENV_ROOT/bin:$PATH"' >>~/.bashrc &&
-        echo 'eval "$(pyenv init -)"' >>~/.bashrc &&
-        echo 'eval "$(pyenv virtualenv-init -)"' >>~/.bashrc &&
-        sudo chmod +x pyinstall &&
-        cp pyinstall $PYENV_ROOT/bin/pyinstall &&
-        source $BASHRC &&
-        printf "${GREEN}pyenv is installed${NORMAL}\n"
-    fi
-    if pyenv versions | grep -q "$PYTHON_VERSION"; then
-      printf "${GREEN}python $PYTHON_VERSION is already installed${NORMAL}\n"
-    else
-      pyinstall $PYTHON_VERSION
-    fi
-    # install poetry
-    if checkCmdExist poetry; then
-      printf "${GREEN}poetry is already installed${NORMAL}\n"
-    else
-      if checkNeedPrompt "install poetry"; then
-        printf "${BLUE}installing poetry${NORMAL}\n"
-        curl -sSL https://install.python-poetry.org/ | pyenv exec python - &&
-          printf "${GREEN}poetry is installed${NORMAL}\n"
-        echo 'export PATH="/home/liuyahui/.local/bin:$PATH"' >>~/.zshrc
-        echo 'export PATH="/home/liuyahui/.local/bin:$PATH"' >>~/.bashrc
+        if checkNeedPrompt "Config pip mirror"; then
+          printf "${BLUE}Config pip mirror${NORMAL}\n"
+          pyenv shell $PYTHON_VERSION
+          pyenv exec pip config set global.index-url $PIP_MIRROR
+          printf "${GREEN}Pip mirror successfully configured${NORMAL}\n"
+        fi
       fi
     fi
-    # install pipenv
-    if checkCmdExist pipenv; then
-      printf "${GREEN}pipenv is already installed${NORMAL}\n"
-    else
-      if checkNeedPrompt "install pipenv"; then
-        printf "${BLUE}installing pipenv${NORMAL}\n"
-        pyenv shell $PYTHON_VERSION
-        pyenv exec pip install pipenv &&
-          printf "${GREEN}pipenv is installed${NORMAL}\n"
-      fi
-    fi
-    # 配置pip镜像
-    if [ $IS_IN_GFW = true ]; then
-      if checkNeedPrompt "Config pip mirror"; then
-        printf "${BLUE}Config pip mirror${NORMAL}\n"
-        pyenv shell $PYTHON_VERSION
-        pyenv exec pip config set global.index-url $PIP_MIRROR
-        printf "${GREEN}Pip mirror successfully configured${NORMAL}\n"
-      fi
+    if [[ $selected_option == "miniforge" ]]; then
+      curl -L -O "https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-$(uname)-$(uname -m).sh"
+      bash Miniforge3-$(uname)-$(uname -m).sh
     fi
   fi
 }
@@ -329,7 +382,7 @@ function setupGit() {
     read git_private_token
     git config --global http.extraheader "PRIVATE-TOKEN: $git_private_token"
     username=$(git config --global user.name)
-    printf "${YELLOW}please enter your git private url:${NORMAL}\n"
+    printf "${YELLOW}please enter your git private url:(example:gitlab.hive-intel.com)${NORMAL}\n"
     read git_private
     printf "${YELLOW}please enter your git private ssh port: (default 22) ${NORMAL}\n"
     read git_private_port
@@ -453,8 +506,12 @@ function setUpZsh() {
   if [ $IS_IN_GFW = true ]; then
     sed -i "s/https:\/\/github.com/https:\/\/$GITHUB_MIRROR/g" ./install_zsh.sh &&
       sed -i "s/https:\/\/raw.githubusercontent.com/https:\/\/raw.$GITHUB_MIRROR/g" ./install_zsh.sh
+  else
+    sed -i "s/https:\/\/github.com/https:\/\/$GITHUB_MIRROR/g" ./install_zsh.sh &&
+      sed -i "s/https:\/\/raw.githubusercontent.com/https:\/\/raw.$GITHUB_MIRROR/g" ./install_zsh.sh
   fi
   bash ./install_zsh.sh
+  # need to restart manually
 }
 
 function setUpDocker() {

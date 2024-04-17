@@ -89,7 +89,7 @@ main() {
     echo '/ /_/ / / / /  / / / / / / /_/ /    / /_(__  ) / / / '
     echo '\____/_/ /_/  /_/ /_/ /_/\__, /    /___/____/_/ /_/  '
     echo '                        /____/                       ....is now installed!'
-    printf "${YELLOW}and hacked by thrimbda!${GREEN}"
+    printf "${YELLOW}and customized by aak1247!${GREEN}\n"
     echo ''
     echo ''
     echo 'Please look over the ~/.zshrc file to select plugins, themes, and options.'
@@ -169,6 +169,7 @@ main() {
   echo ' "mm"#  "mm"#  #  "m  mm#mm  m#mmmm     #   m"    ...empower your shell, enjoy yourself.'
   printf "${NORMAL}"
   env zsh -l
+  printf "${RED} Please manually restore the script if you want resume ${NORMAL}"
 }
 
 main
